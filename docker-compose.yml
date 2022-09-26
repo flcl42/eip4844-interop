@@ -5,14 +5,17 @@ volumes:
   geth_data2:
   beacon_node_data:
   beacon_node_follower_data:
+  beacon_node_nm_data:
 
 services:
   execution-node:
+    container_name: en
     build:
       context: .
       dockerfile: Dockerfile.geth
     ports:
-      - "8545:8545"
+      - "8546:8545"
+      - "30304:30303"
     environment:
       GETH_VERBOSITY: 4
     volumes:
@@ -22,6 +25,7 @@ services:
         target: /genesis.json
 
   execution-node-2:
+    container_name: en2
     depends_on:
       - execution-node
     build:
@@ -31,7 +35,8 @@ services:
       PEER: execution-node:30303
       GETH_VERBOSITY: 4
     ports:
-      - "8546:8545"
+      - "8547:8545"
+      - "30305:30303"
     volumes:
       - "geth_data2:/db"
       - type: bind
@@ -39,15 +44,16 @@ services:
         target: /genesis.json
 
   beacon-node:
+    container_name: bn
     depends_on:
       - execution-node
-      - jaeger-tracing
+      # - jaeger-tracing
     build:
       context: .
       dockerfile: ./Dockerfile.prysm
     environment:
       EXECUTION_NODE_URL: http://execution-node:8545
-      TRACING_ENDPOINT: http://jaeger-tracing:14268/api/traces
+      # TRACING_ENDPOINT: http://jaeger-tracing:14268/api/traces
       PROCESS_NAME: beacon-node
       VERBOSITY: debug
       P2P_PRIV_KEY: /etc/prysm-priv-key
@@ -69,10 +75,11 @@ services:
         target: /etc/prysm-priv-key
 
   beacon-node-follower:
+    container_name: bnf
     depends_on:
       - execution-node-2
       - beacon-node
-      - jaeger-tracing
+      # - jaeger-tracing
     build:
       context: .
       dockerfile: ./Dockerfile.prysm
@@ -103,10 +110,46 @@ services:
         source: ./prysm-follower-priv-key
         target: /etc/prysm-priv-key
 
-  validator-node:
+  beacon-node-nm:
+    container_name: bnn
     depends_on:
       - beacon-node
-      - jaeger-tracing
+      # - jaeger-tracing
+    build:
+      context: .
+      dockerfile: ./Dockerfile.prysm
+    environment:
+      EXECUTION_NODE_URL: http://host.docker.internal:8551
+      TRACING_ENDPOINT: http://jaeger-tracing:14268/api/traces
+      PROCESS_NAME: beacon-node-nm
+      BEACON_NODE_RPC: http://beacon-node:3500
+      VERBOSITY: debug
+      P2P_PRIV_KEY: /etc/prysm-priv-key
+    entrypoint: run_beacon_node_peer.sh
+    ports:
+      - "3502:3500"
+      - "4002:4000"
+      - "13002:13000"
+    volumes:
+      - "beacon_node_nm_data:/chaindata"
+      - type: bind
+        source: ./prysm-chain-config.yml
+        target: /config/prysm-chain-config.yml
+      - type: bind
+        source: ./run_beacon_node.sh
+        target: /usr/local/bin/run_beacon_node.sh
+      - type: bind
+        source: ./run_beacon_node_peer.sh
+        target: /usr/local/bin/run_beacon_node_peer.sh
+      - type: bind
+        source: ./prysm-nm-priv-key
+        target: /etc/prysm-priv-key
+
+  validator-node:
+    container_name: vn
+    depends_on:
+      - beacon-node
+      # - jaeger-tracing
     build:
       context: .
       dockerfile: ./Dockerfile.prysm
@@ -122,9 +165,9 @@ services:
       --force-clear-db
       --chain-config-file=/config/prysm-chain-config.yml
       --suggested-fee-recipient 0xa94f5374fce5edbc8e2a8697c15331677e6ebf0b
-      --enable-tracing
-      --tracing-endpoint http://jaeger-tracing:14268/api/traces
-      --tracing-process-name validator-node
+    # --enable-tracing
+    # --tracing-endpoint http://jaeger-tracing:14268/api/traces
+    # --tracing-process-name validator-node
     ports:
       - "7500:7500"
     volumes:
@@ -132,15 +175,15 @@ services:
         source: ./prysm-chain-config.yml
         target: /config/prysm-chain-config.yml
 
-  jaeger-tracing:
-    image: jaegertracing/all-in-one:1.35
-    environment:
-      COLLECTOR_ZIPKIN_HTTP_PORT: 9411
-    ports:
-      - "5775:5775/udp"
-      - "6831:6831/udp"
-      - "6832:6832/udp"
-      - "5778:5778"
-      - "16686:16686"
-      - "14268:14268"
-      - "9411:9411"
+  # jaeger-tracing:
+  #   image: jaegertracing/all-in-one:1.35
+  #   environment:
+  #     COLLECTOR_ZIPKIN_HTTP_PORT: 9411
+  #   ports:
+  #     - "5775:5775/udp"
+  #     - "6831:6831/udp"
+  #     - "6832:6832/udp"
+  #     - "5778:5778"
+  #     - "16686:16686"
+  #     - "14268:14268"
+  #     - "9411:9411"

@@ -64,12 +64,12 @@ exec geth \
     --http.vhosts="*" \
     --http.addr=0.0.0.0 \
     --http.port="$RPC_PORT" \
-    -http.api=web3,debug,engine,eth,net,txpool \
+    -http.api=web3,debug,engine,eth,net,txpool,admin \
     --ws \
     --ws.addr=0.0.0.0 \
     --ws.port="$WS_PORT" \
     --ws.origins="*" \
-    --ws.api=debug,eth,txpool,net,engine \
+    --ws.api=debug,eth,txpool,net,engine,admin \
     --maxpeers=2 ${ADDITIONAL_FLAGS} \
     --authrpc.jwtsecret=0x98ea6e4f216f2fb4b69fff9b3a44842c38686ca685f3f55dc48c5d3fb1107be4 \
     --allow-insecure-unlock \
