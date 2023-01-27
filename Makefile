@@ -1,11 +1,6 @@
-SERVICES=geth-1\
-	 geth-2\
+SERVICES=nethermind\
 	 prysm-beacon-node\
-	 prysm-beacon-node-follower\
 	 prysm-validator-node\
-	 lighthouse-beacon-node\
-	 lighthouse-beacon-node-follower\
-	 lighthouse-validator-node\
 	 jaeger-tracing
 
 devnet-setup: devnet-clean
@@ -44,6 +39,7 @@ devnet-down:
 devnet-restart: devnet-down devnet-up
 
 devnet-clean:
+	rm -rf config_data || sudo rm -rf config_data 
 	docker compose --project-name eip4844-interop down --rmi local --volumes
 	docker image ls 'eip4844-interop*' --format='{{.Repository}}' | xargs -r docker rmi
 	docker volume ls --filter name=eip4844-interop --format='{{.Name}}' | xargs -r docker volume rm
