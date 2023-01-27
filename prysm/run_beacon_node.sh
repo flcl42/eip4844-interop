@@ -11,7 +11,6 @@ set -exu -o pipefail
 
 EXTERNAL_IP=$(ip addr show eth0 | grep inet | awk '{ print $2 }' | cut -d '/' -f1)
 
-BOOTNODE=$(cat /config_data/custom_config_data/boot_enr.yaml | sed 's/- //')
 openssl rand -hex 32 | tr -d '\n' > /tmp/priv-key
 
 beacon-chain\
@@ -19,7 +18,6 @@ beacon-chain\
     --verbosity="$VERBOSITY" \
     --datadir /chaindata \
     --force-clear-db \
-    --bootstrap-node $BOOTNODE \
     --genesis-state=/config_data/custom_config_data/genesis.ssz \
     --execution-endpoint="$EXECUTION_NODE_URL" \
     --jwt-secret=/config_data/cl/jwtsecret \
